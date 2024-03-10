@@ -3,11 +3,39 @@
 #include <string.h>
 #include <math.h>
 
-#define CAPS_ASC(a, b)  if (a > b) {int t = a; a = b; b = t;}
-#define CAPS_DESC(a, b) if (b > a) {int t = a; a = b; b = t;}
+#define swap(a, b) {int t = a; a = b; b = t;}
 
-void bitonic_sort_asc(int* val, int num);
-void bitonic_sort_desc(int* val, int num);
+void compare_and_swap(int val1, int val2, int dir){
+    if (dir == (val1 > val2)){
+        swap(val1, val2);
+    }
+}
+
+void bitonic_merge(int* val, int num, int dir){
+    if (num > 1)
+    {
+        int k = num/2;
+        for (int i = 0; i < k; i++){
+            compare_and_swap(val[i], val[i + k], dir);
+        }
+        bitonic_merge(val, k, dir);
+        bitonic_merge(val + k, k, dir);
+    }
+}
+
+void bitonic_sort(int* val, int num, int dir){
+    if (num > 1)
+    {
+        int k = num/2;
+        bitonic_sort(val, k, 1);
+        bitonic_sort(val + k, k, 0);
+        bitonic_merge(val, num, dir);
+    }
+}
+
+void sort(int* val, int num, int dir){
+    bitonic_sort(val, num, dir);
+}
 
 int main(int argc, char* argv[]){
 
@@ -32,10 +60,11 @@ int main(int argc, char* argv[]){
 
     // To do:
     // Must do a merge sort to get the numbers in the correct order
-    bitonic_sort(numbers, n);
+    int up = 1; // 1 for ascending order, 0 for descending order
+    sort(numbers, n, up);
     
     for (int i = 0; i < n - 1; i++){
-        if (numbers[i] > numbers[i + 1]){
+        if (numbers[i] < numbers[i + 1]){
             printf("Error: Array not sorted\n");
             return -1;
         }
@@ -43,30 +72,4 @@ int main(int argc, char* argv[]){
 
     free(numbers);
     return 0;
-}
-
-
-void bitonic_sort_asc(int* val, int num){
-
-    if (num == 2){
-        CAPS_ASC(val[0], val[1])
-        return;
-    }
-    else{
-        bitonic_sort_asc(val, num / 2);
-        bitonic_sort_desc(val + num / 2, num / 2);
-        merge(val, num);
-    }
-}
-
-void bitonic_sort_desc(int* val, int num){
-    if (num == 2){
-        CAPS_DESC(val[0], val[1])
-        return;
-    }
-    else{
-        bitonic_sort_desc(val, num / 2);
-        bitonic_sort_asc(val + num / 2, num / 2);
-        merge(val, num);
-    }
 }
