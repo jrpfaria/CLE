@@ -12,5 +12,6 @@ static double get_delta_time(void)
         exit(EXIT_FAILURE);
     }
 
-    return (t1.tv_sec - t0.tv_sec) + 1.0e-9 * (double) (t1.tv_nsec - t0.tv_nsec);
+    return (double) (t1.tv_sec - t0.tv_sec) + 
+                    1.0e-9 * (double) (t1.tv_nsec - t0.tv_nsec);
 }
