@@ -1,23 +1,17 @@
-#include <stdio.h>
-#include <stdlib.h>
+#include "common/time_spec.h"
 
 #define swap(a, b) {int t = *a; *a = *b; *b = t;}
-
-int swaps = 1;
-int calls = 0;
+#define ASCENDING 1
+#define DESCENDING 0
 
 void compare_and_swap(int* val1, int* val2, int dir) {
-    if (dir == (*val1 > *val2)) {
-        printf("Swap %d: Swapping %d and %d, on call %d\n", swaps++, *val1, *val2, calls);
-        printf("val1: %d, val2: %d\n", *val1, *val2);
+    if (dir == (*val1 > *val2))
         swap(val1, val2);
-        printf("val1: %d, val2: %d\n", *val1, *val2);
-    }
 }
 
 void bitonic_merge(int* val, int num, int dir) {
     if (num > 1) {
-        int k = num / 2;
+        int k = num >> 1;
         for (int i = 0; i < k; i++)
             compare_and_swap(val + i, val + i + k, dir);
         bitonic_merge(val, k, dir);
@@ -26,15 +20,8 @@ void bitonic_merge(int* val, int num, int dir) {
 }
 
 void bitonic_sort(int* val, int num, int dir) {
-    calls++;
-    printf("Bitonic Sort call no.:%d; Sorting %d elements\n", calls, num);
-    printf("Array: ");
-    for (int i = 0; i < num; i++)
-        printf("%d, ", val[i]);
-    printf("\n");
-
     if (num > 1) {
-        int k = num / 2;
+        int k = num >> 1;
         bitonic_sort(val, k, 1);
         bitonic_sort(val + k, k, 0);
         bitonic_merge(val, num, dir);
@@ -66,8 +53,8 @@ int main(int argc, char* argv[]){
         numbers[i++] = getw(file);
     }
 
-    int up = 1; // 1 for ascending order, 0 for descending order
-    sort(numbers, n, up);
+    int order = ASCENDING;
+    sort(numbers, n, order);
 
     int flag = 0;
     for (int i = 0; i < n - 1; i++) {
@@ -78,12 +65,7 @@ int main(int argc, char* argv[]){
         }
     }
 
-    if (!flag) {
-        printf("Sorted Array: ");
-        for (int i = 0; i < n; i++)
-            printf("%d, ", numbers[i]);
-    }
-
     free(numbers);
+    
     return flag ? -1 : 0;
 }
