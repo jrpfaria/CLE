@@ -11,30 +11,29 @@ void compare_and_swap(int val1, int val2, int dir){
     }
 }
 
-void bitonic_merge(int* val, int num, int dir){
+void bitonic_merge(int* val, int low, int num, int dir){
     if (num > 1)
     {
         int k = num/2;
-        for (int i = 0; i < k; i++){
+        for (int i = 0; i < k; i++)
             compare_and_swap(val[i], val[i + k], dir);
-        }
-        bitonic_merge(val, k, dir);
-        bitonic_merge(val + k, k, dir);
+        bitonic_merge(val, low, k, dir);
+        bitonic_merge(val, low + k, k, dir);
     }
 }
 
-void bitonic_sort(int* val, int num, int dir){
+void bitonic_sort(int* val, int low, int num, int dir){
     if (num > 1)
     {
         int k = num/2;
-        bitonic_sort(val, k, 1);
-        bitonic_sort(val + k, k, 0);
-        bitonic_merge(val, num, dir);
+        bitonic_sort(val, low, k, 1);
+        bitonic_sort(val, low + k, k, 0);
+        bitonic_merge(val, low, num, dir);
     }
 }
 
 void sort(int* val, int num, int dir){
-    bitonic_sort(val, num, dir);
+    bitonic_sort(val, 0, num, dir);
 }
 
 int main(int argc, char* argv[]){
@@ -58,18 +57,22 @@ int main(int argc, char* argv[]){
         numbers[i++] = getw(file);
     }
 
-    // To do:
-    // Must do a merge sort to get the numbers in the correct order
     int up = 1; // 1 for ascending order, 0 for descending order
     sort(numbers, n, up);
     
+    int flag = 0;
     for (int i = 0; i < n - 1; i++){
-        if (numbers[i] < numbers[i + 1]){
+        if (numbers[i] <= numbers[i + 1]){
+            flag = 1;
             printf("Error: Array not sorted\n");
-            return -1;
+            break;
         }
     }
 
+    if (flag)
+        for (int i = 0; i < n; i++)
+            printf("%d, ", numbers[i]);
+
     free(numbers);
-    return 0;
+    return flag? -1 : 0;
 }
