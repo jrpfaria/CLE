@@ -9,7 +9,7 @@ int swaps = 1;
 int calls = 0;
 void compare_and_swap(int* val1, int* val2, int dir){
     if (dir == (*val1 > *val2)){
-        printf("Swap %d: Swapping %d and %d, on call %d\n", swaps++, val1, val2, calls);
+        printf("Swap %d: Swapping %d and %d, on call %d\n", swaps++, *val1, *val2, calls);
         printf("val1: %d, val2: %d\n", *val1, *val2);
         swap(val1, val2);
         printf("val1: %d, val2: %d\n", *val1, *val2);
