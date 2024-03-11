@@ -3,11 +3,16 @@
 #include <string.h>
 #include <math.h>
 
-#define swap(a, b) {int t = a; a = b; b = t;}
+#define swap(a, b) {int t = *a; memcpy(a,b,sizeof(int)); memcpy(b,&t,sizeof(int));}
 
-void compare_and_swap(int val1, int val2, int dir){
-    if (dir == (val1 > val2)){
+int swaps = 1;
+int calls = 0;
+void compare_and_swap(int* val1, int* val2, int dir){
+    if (dir == (*val1 > *val2)){
+        printf("Swap %d: Swapping %d and %d, on call %d\n", swaps++, val1, val2, calls);
+        printf("val1: %d, val2: %d\n", *val1, *val2);
         swap(val1, val2);
+        printf("val1: %d, val2: %d\n", *val1, *val2);
     }
 }
 
@@ -16,13 +21,20 @@ void bitonic_merge(int* val, int low, int num, int dir){
     {
         int k = num/2;
         for (int i = 0; i < k; i++)
-            compare_and_swap(val[i], val[i + k], dir);
+            compare_and_swap(val + i, val + i + k, dir);
         bitonic_merge(val, low, k, dir);
         bitonic_merge(val, low + k, k, dir);
     }
 }
 
 void bitonic_sort(int* val, int low, int num, int dir){
+    calls++;
+    printf("Bitonic Sort call no.:%d; Sorting %d elements\n", calls, num);
+    printf("Array: ");
+    for (int i = 0; i < num; i++)
+        printf("%d, ", val[i]);
+    printf("\n");
+
     if (num > 1)
     {
         int k = num/2;
