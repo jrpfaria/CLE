@@ -163,14 +163,6 @@ int main (int argc, char *argv[])
 
   printf ("\nFinal report\n");
   for (i = 0; i < nThreads; i++)
-  { if (pthread_join (tIdDist[i], (void *) &pStatus) != 0)                                       /* thread distributor */
-       { perror ("error on waiting for thread distributor");
-         exit (EXIT_FAILURE);
-       }
-    printf ("thread distributor, with id %u, has terminated: ", i);
-    printf ("its status was %d\n", *pStatus);
-  }
-  for (i = 0; i < nThreads; i++)
   { if (pthread_join (tIdWork[i], (void *) &pStatus) != 0)                                       /* thread worker */
        { perror ("error on waiting for thread customer");
          exit (EXIT_FAILURE);
@@ -178,13 +170,20 @@ int main (int argc, char *argv[])
     printf ("thread worker, with id %u, has terminated: ", i);
     printf ("its status was %d\n", *pStatus);
   }
+  if (pthread_join (*tIdDist, (void *) &pStatus) != 0)                                       /* thread distributor */
+      { perror ("error on waiting for thread distributor");
+        exit (EXIT_FAILURE);
+      }
+  printf ("thread distributor, with id %u, has terminated: ", i);
+  printf ("its status was %d\n", *pStatus);
+  
   printf ("\nElapsed time = %.6f s\n", get_delta_time ());
 
   exit (EXIT_SUCCESS);
 }
 
 pthread_mutex_t control_mutex = PTHREAD_MUTEX_INITIALIZER;
-static char control = 0;
+static char control = 1;
 
 char is_sorted(int* array, char method)
 {
@@ -233,12 +232,12 @@ static void *distributor (void *par)
       putVal(&array[k*load], load, sorting_method, i != 0);
     }
     while(control != nThreads >> i){/*wait*/}
-    for (j = (nThreads >> i) - 1; j > log2(nThreads >> i); j--) workerLives[j] = 0; /*kill worker*/
-    printf("setting control to 0\n");
-
+    
     pthread_mutex_lock(&control_mutex);
     control = 0;
     pthread_mutex_unlock(&control_mutex);
+    
+    for (j = (nThreads >> i) - 1; j > log2(nThreads >> i); j--) workerLives[j] = 0; /*kill worker*/
   }
 
   statusDist[0] = EXIT_SUCCESS;
@@ -260,7 +259,7 @@ static void *worker (void *par)
 
   while(1)
   { 
-    while(control){printf("Thread %d waiting\n", id);/*wait*/}
+    while(!control){printf("Thread %d waiting\n", id);/*wait*/}
     
     if (!workerLives[id]){
       printf("Worker %d is dead\n", id);
