@@ -119,7 +119,7 @@ int main (int argc, char *argv[])
        return EXIT_FAILURE;
      }
 
-  if (((statusDist = malloc (nThreads * sizeof (int))) == NULL) ||
+  if (((statusDist = malloc (sizeof (int))) == NULL) ||
       ((statusWork = malloc (nThreads * sizeof (int))) == NULL))
      { fprintf (stderr, "error on allocating space to the return status arrays of distributor / worker threads\n");
        exit (EXIT_FAILURE);
@@ -183,7 +183,8 @@ int main (int argc, char *argv[])
 }
 
 pthread_mutex_t control_mutex = PTHREAD_MUTEX_INITIALIZER;
-static char control = 1;
+pthread_cond_t control_cond = PTHREAD_COND_INITIALIZER;
+static char control = 0;
 
 char is_sorted(int* array, char method)
 {
@@ -221,30 +222,48 @@ static void *distributor (void *par)
   for (int i = 0; i < array_length; i++)
     array[i] = getw(input_file);
 
-  int i, j, k,               /* counting variable */
-      load;                  /* load of the subarray */
+  int i, j, k,                      /* counting variable */
+      load,                         /* load of the subarray */
+      sort_aux = sorting_method;    /* auxiliary variable */
 
   for (i = 0; i <= log2(nThreads) ; i++)
   { 
-    load = array_length/nThreads>>i;
+    printf("Iteration %d\n", i);
+    load = array_length/(nThreads>>i);
     for(k = 0; k < nThreads >> i; k++){
-      printf("distributor is sending %d elements to worker %d\n", load, k);
-      putVal(&array[k*load], load, sorting_method, i != 0);
+      printf("produced values: %p, %d, %d, %d\n", &array[k*load], load, sort_aux, i != 0);
+      putVal(&array[k*load], load, sort_aux, i != 0);
+      sort_aux = !sort_aux;
     }
-    while(control != nThreads >> i){/*wait*/}
-    
+
+    // Signal workers to start processing
     pthread_mutex_lock(&control_mutex);
-    control = 0;
+    control = nThreads >> i;
+    pthread_cond_broadcast(&control_cond);
+    pthread_mutex_unlock(&control_mutex);
+
+    pthread_mutex_lock(&control_mutex);
+    while(control > 0){ /*wait for workers to finish*/
+      pthread_cond_wait(&control_cond, &control_mutex);
+    }
     pthread_mutex_unlock(&control_mutex);
     
     for (j = (nThreads >> i) - 1; j > log2(nThreads >> i); j--) workerLives[j] = 0; /*kill worker*/
   }
 
-  statusDist[0] = EXIT_SUCCESS;
-  pthread_exit (&statusDist[0]);
+  pthread_mutex_lock(&control_mutex);
+  for (i = 0; i < nThreads; i++) workerLives[i] = 0; /*make sure every worker dies*/
+  control = nThreads;
+  pthread_cond_broadcast(&control_cond);
+  pthread_mutex_unlock(&control_mutex);
+
+  printf("distributor has terminated\n");
+
+  *statusDist = EXIT_SUCCESS;
+  pthread_exit (statusDist);
 }
 
-/**
+/** 
  *  \brief Function worker.
  *
  *  Its role is to simulate the life cycle of a worker.
@@ -257,32 +276,40 @@ static void *worker (void *par)
   unsigned int id = *((unsigned int *) par);  /* worker id */
   FIFO_DATA val;
 
+  int debug = 0;
+
   while(1)
   { 
-    while(!control){printf("Thread %d waiting\n", id);/*wait*/}
-    
+    pthread_mutex_lock(&control_mutex);
+    while(!control){ /*wait for distributor to send data*/
+      pthread_cond_wait(&control_cond, &control_mutex);
+    }
+    pthread_mutex_unlock(&control_mutex);
+
+    // Check if worker should terminate
     if (!workerLives[id]){
-      printf("Worker %d is dead\n", id);
       break;
     }
 
-    printf("Worker %d", id);
     val = getVal(id);
-    printf(" got val = %p\n", (void*)&val);
-
     if (val.act){
-      printf("Worker %d sorting %d elements\n", id, val.num);
       bitonic_merge(val.arr, val.num, val.opt);
     }
     else{
-      printf("Worker %d merging %d elements\n", id, val.num);
       bitonic_sort(val.arr, val.num, val.opt);
     }
 
     pthread_mutex_lock(&control_mutex);
-    control++;
+    control--;
+    pthread_mutex_unlock(&control_mutex);
+
+    // Signal distributor that worker has finished
+    pthread_mutex_lock(&control_mutex);
+    pthread_cond_signal(&control_cond);
     pthread_mutex_unlock(&control_mutex);
   }
+
+  printf ("worker %u has terminated\n", id);
 
   statusWork[id] = EXIT_SUCCESS;
   pthread_exit (&statusWork[id]);
