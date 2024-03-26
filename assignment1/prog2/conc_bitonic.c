@@ -142,8 +142,10 @@ int main (int argc, char *argv[])
   
   // for (i = 0; i < 1; i++)
     // dist[i] = i;
-  for (i = 0; i < nThreads; i++)
+  for (i = 0; i < nThreads; i++){
+    workerLives[i] = 1;
     workers[i] = i;
+  }
   (void) get_delta_time ();
 
   /* generation of intervening entities threads */
@@ -181,6 +183,7 @@ int main (int argc, char *argv[])
   exit (EXIT_SUCCESS);
 }
 
+pthread_mutex_t control_mutex = PTHREAD_MUTEX_INITIALIZER;
 static char control = 0;
 
 char is_sorted(int* array, char method)
@@ -226,14 +229,16 @@ static void *distributor (void *par)
   { 
     load = array_length/nThreads>>i;
     for(k = 0; k < nThreads >> i; k++){
-      workerLives[k] = 1;
       printf("distributor is sending %d elements to worker %d\n", load, k);
       putVal(&array[k*load], load, sorting_method, i != 0);
     }
-    while(control != nThreads >> i){printf("distributor is waiting for control (%d) to be (%d)\n", control, nThreads >> i);/*wait*/}
-    for (j = (nThreads >> i) - 1; j >= nThreads >> (i+1); j--) workerLives[j] = 0; /*kill worker*/
+    while(control != nThreads >> i){/*wait*/}
+    for (j = (nThreads >> i) - 1; j > log2(nThreads >> i); j--) workerLives[j] = 0; /*kill worker*/
     printf("setting control to 0\n");
+
+    pthread_mutex_lock(&control_mutex);
     control = 0;
+    pthread_mutex_unlock(&control_mutex);
   }
 
   statusDist[0] = EXIT_SUCCESS;
@@ -253,10 +258,15 @@ static void *worker (void *par)
   unsigned int id = *((unsigned int *) par);  /* worker id */
   FIFO_DATA val;
 
-  while(workerLives[id])
+  while(1)
   { 
     while(control){printf("Thread %d waiting\n", id);/*wait*/}
     
+    if (!workerLives[id]){
+      printf("Worker %d is dead\n", id);
+      break;
+    }
+
     printf("Worker %d", id);
     val = getVal(id);
     printf(" got val = %p\n", (void*)&val);
@@ -270,7 +280,9 @@ static void *worker (void *par)
       bitonic_sort(val.arr, val.num, val.opt);
     }
 
+    pthread_mutex_lock(&control_mutex);
     control++;
+    pthread_mutex_unlock(&control_mutex);
   }
 
   statusWork[id] = EXIT_SUCCESS;
