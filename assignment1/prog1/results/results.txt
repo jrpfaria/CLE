@@ -1,0 +1,21 @@
+File: dataSet1/text0.txt
+Total number of words: 17
+Number of words containing the same consonant 2 or more times: 2
+
+File: dataSet1/text1.txt
+Total number of words: 1184
+Number of words containing the same consonant 2 or more times: 207
+
+File: dataSet1/text2.txt
+Total number of words: 11027
+Number of words containing the same consonant 2 or more times: 1999
+
+File: dataSet1/text3.txt
+Total number of words: 3369
+Number of words containing the same consonant 2 or more times: 508
+
+File: dataSet1/text4.txt
+Total number of words: 9914
+Number of words containing the same consonant 2 or more times: 1322
+
+Time: 0.002083
