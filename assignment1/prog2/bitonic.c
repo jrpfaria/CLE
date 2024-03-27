@@ -63,7 +63,13 @@ int main(int argc, char* argv[]){
             break;
         }
     }
-
+    
+    if (!flag)
+    {    printf("Array sorted\n");
+        for (int i = 0; i < n; i++)
+            printf("%d ", numbers[i]);
+        printf("\n");
+    }
     free(numbers);
     
     return flag ? -1 : 0;
