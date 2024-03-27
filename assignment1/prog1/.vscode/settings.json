@@ -1,9 +1,0 @@
-{
-    "files.associations": {
-        "shared_region.h": "c",
-        "stdio.h": "c",
-        "unistd.h": "c",
-        "constants.h": "c",
-        "cstdlib": "c"
-    }
-}
