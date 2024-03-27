@@ -70,7 +70,7 @@ int main (int argc, char *argv[])
   /* process command line options */
 
   int opt;          /* selected option */
-  FILE* file;
+  FILE* file = NULL;
 
   do
   { switch ((opt = getopt (argc, argv, "t:h:f:s")))
@@ -253,7 +253,7 @@ static void *distributor (void *par)
 
   pthread_mutex_lock(&control_mutex);
   for (i = 0; i < nThreads; i++) workerLives[i] = 0; /*make sure every worker dies*/
-  control = nThreads;
+  control = 0;
   pthread_cond_broadcast(&control_cond);
   pthread_mutex_unlock(&control_mutex);
 
@@ -276,12 +276,10 @@ static void *worker (void *par)
   unsigned int id = *((unsigned int *) par);  /* worker id */
   FIFO_DATA val;
 
-  int debug = 0;
-
   while(1)
   { 
     pthread_mutex_lock(&control_mutex);
-    while(!control){ /*wait for distributor to send data*/
+    while(!control && workerLives[id]){ /*wait for distributor to send data*/
       pthread_cond_wait(&control_cond, &control_mutex);
     }
     pthread_mutex_unlock(&control_mutex);
@@ -294,9 +292,21 @@ static void *worker (void *par)
     val = getVal(id);
     if (val.act){
       bitonic_merge(val.arr, val.num, val.opt);
+      if (val.num == array_length){
+        printf("Sorted array: ");
+        for (int i = 0; i < array_length; i++)
+          printf("%d ", val.arr[i]);
+        printf("\n");
+      }
     }
     else{
       bitonic_sort(val.arr, val.num, val.opt);
+      if (val.num == array_length){
+        printf("Sorted array: ");
+        for (int i = 0; i < array_length; i++)
+          printf("%d ", val.arr[i]);
+        printf("\n");
+      }
     }
 
     pthread_mutex_lock(&control_mutex);
