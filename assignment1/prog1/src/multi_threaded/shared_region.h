@@ -16,6 +16,7 @@ extern int monitor_init_status;
 typedef struct file_data_t {
     char *filename;
     FILE *pointer;
+    char previous_char;
     int num_words;
     int num_words_with_double_consonant;
 } file_data_t;

@@ -47,13 +47,9 @@ static void *worker(void *worker_id) {
 
     printf("Worker %d started\n", id);
 
-    fetch_data_to_process(id, chunk);
-
-    /*
-    *while(fetch_data_to_process(id, chunk) == 0) {
-    *    // process_chunk(id, chunk);
-    *}
-    */
+    while(fetch_data_to_process(id, chunk) == 0) {
+        // process_chunk(id, chunk);
+    }
    
     free(chunk);
 

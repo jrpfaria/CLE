@@ -11,7 +11,7 @@ static pthread_once_t init = PTHREAD_ONCE_INIT;
 
 static file_data_t *file_data;
 
-static int file_index;
+static int current_file_index;
 
 static void init_shared_region(void)
 {
@@ -26,11 +26,12 @@ static void init_shared_region(void)
     {
         file_data[i].filename = filenames[i];
         file_data[i].pointer = NULL;               /* Try to only have one file open at a time */
+        file_data[i].previous_char = '\0';
         file_data[i].num_words = 0;
         file_data[i].num_words_with_double_consonant = 0;
     }
 
-    file_index = 0;
+    current_file_index = 0;
 }
 
 int fetch_data_to_process(unsigned int worker_id, file_chunk_t *file_chunk)
@@ -47,9 +48,9 @@ int fetch_data_to_process(unsigned int worker_id, file_chunk_t *file_chunk)
 
     /* Critical region starts here... */
 
-    if (file_index < num_files)
+    if (current_file_index < num_files)
     {
-        file_data_t *file = &file_data[file_index];     /* Get file as a pointer so changes persist */
+        file_data_t *file = &file_data[current_file_index];     /* Get file as a pointer so changes persist */
 
         if (file->pointer == NULL)
         {
@@ -59,13 +60,17 @@ int fetch_data_to_process(unsigned int worker_id, file_chunk_t *file_chunk)
                 exit(EXIT_FAILURE);
             }
         }
+
+        file_chunk->file_index = current_file_index;
+        file_chunk->previous_char = file->previous_char;
+
+        size_t bytes_read = fread(file_chunk->buffer, sizeof(char), max_chunk_size, file->pointer);
+        if (bytes_read < max_chunk_size) {
+            fclose(file->pointer);
+            file->pointer = NULL;
+            current_file_index++;
+        }
     }
-
-    // Obtain the partial file data to process (only get complete words) 
-    // Do not split the contents of a word (and byte) between two threads
-    // Store the previous byte to check if we split a word between two threads
-    // So we can the determine if we should count the word in the current thread
-
 
     if ((worker_status[worker_id] = pthread_mutex_unlock(&access_critical_region)) != 0)
     {
