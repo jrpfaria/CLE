@@ -1,4 +1,6 @@
 #include <stdio.h>
+#include <stdlib.h>
+#include <errno.h>
 #include <pthread.h>
 
 #include "shared_region.h"
@@ -11,7 +13,7 @@ static file_data_t *file_data;
 
 static int file_index;
 
-static void init_shared_region(char *file_names[])
+static void init_shared_region(void)
 {
     if ((file_data = (file_data_t *)malloc(num_files * sizeof(file_data_t))) == NULL)
     {
@@ -22,7 +24,7 @@ static void init_shared_region(char *file_names[])
 
     for (int i = 0; i < num_files; i++)
     {
-        file_data[i].filename = file_names[i];
+        file_data[i].filename = filenames[i];
         file_data[i].pointer = NULL;               /* Try to only have one file open at a time */
         file_data[i].num_words = 0;
         file_data[i].num_words_with_double_consonant = 0;

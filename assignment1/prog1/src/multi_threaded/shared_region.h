@@ -3,6 +3,8 @@
 
 extern int num_files;
 
+extern char **filenames;
+
 extern int num_threads;
 
 extern int max_chunk_size;
@@ -16,7 +18,7 @@ typedef struct file_data_t {
     FILE *pointer;
     int num_words;
     int num_words_with_double_consonant;
-} file_table_t;
+} file_data_t;
 
 typedef struct file_chunk_t {
     int file_index;
@@ -24,9 +26,7 @@ typedef struct file_chunk_t {
     char *buffer;
 } file_chunk_t;
 
-void init_shared_region(char *file_names[]);
-
-void fetch_data_to_process(unsigned int worker_id, file_chunk_t *file_chunk);
+int fetch_data_to_process(unsigned int worker_id, file_chunk_t *file_chunk);
 
 void print_results();
 

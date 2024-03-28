@@ -13,6 +13,8 @@ char *program_name;
 
 int num_files;
 
+char **filenames;
+
 int num_threads;
 
 int max_chunk_size;
@@ -30,14 +32,29 @@ int monitor_init_status;
 static void *worker(void *worker_id) {
     unsigned int id = *(unsigned int *)worker_id;
     
-    file_chunk_t *chunk = (file_chunk_t *)malloc(sizeof(file_chunk_t));
-    chunk->buffer = (char *)malloc(max_chunk_size * sizeof(char));
+    file_chunk_t *chunk;
 
-    while(fetch_data_to_process(id, chunk) == 0) {
-        process_chunk(id, chunk);
+    if ((chunk = (file_chunk_t *)malloc(sizeof(file_chunk_t))) == NULL) {
+        fprintf(stderr, "%s: Unable to allocate memory for file chunk\n", program_name);
+        exit(EXIT_FAILURE);
     }
 
-    free(chunk->buffer);
+    if ((chunk->buffer = (char *)malloc(max_chunk_size * sizeof(char))) == NULL) {
+        fprintf(stderr, "%s: Unable to allocate memory for file chunk buffer\n", program_name);
+        free(chunk);
+        exit(EXIT_FAILURE);
+    }
+
+    printf("Worker %d started\n", id);
+
+    fetch_data_to_process(id, chunk);
+
+    /*
+    *while(fetch_data_to_process(id, chunk) == 0) {
+    *    // process_chunk(id, chunk);
+    *}
+    */
+   
     free(chunk);
 
     worker_status[id] = EXIT_SUCCESS;
@@ -86,10 +103,14 @@ int main(int argc, char *argv[]) {
 
     num_files = argc - optind;
 
-    char *file_names[num_files];
-    for (int i = 0; i < num_files; i++) file_names[i] = argv[optind + i];
+    if ((filenames = (char **)malloc(num_files * sizeof(char *))) == NULL) {
+        fprintf(stderr, "%s: Unable to allocate memory for file names\n", program_name);
+        exit(EXIT_FAILURE);
+    }
 
-    if (validate_input_files(num_files, file_names) != 0) exit(EXIT_FAILURE);
+    for (int i = 0; i < num_files; i++) filenames[i] = argv[optind + i];
+
+    if (validate_input_files(num_files, filenames) != 0) exit(EXIT_FAILURE);
 
     pthread_t *worker_thread_id;
     unsigned int *worker_id;
@@ -119,7 +140,7 @@ int main(int argc, char *argv[]) {
     }
 
     for (int i = 0; i < num_threads; i++) {
-        if (pthread_join(worker_thread_id[i], (void **)&status_pointer) != 0) {
+        if (pthread_join(worker_thread_id[i], (void *)&status_pointer) != 0) {
             fprintf(stderr, "%s: Unable to join worker thread\n", program_name);
             exit(EXIT_FAILURE);
         }
@@ -129,6 +150,7 @@ int main(int argc, char *argv[]) {
 
     printf("Elapsed time = %.6f s\n", get_delta_time());
     
+    free(filenames);
     free(worker_status);
     free(worker_thread_id);
     free(worker_id);
